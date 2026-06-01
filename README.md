@@ -4,6 +4,9 @@ A static HTML dashboard showing the GitHub PRs you've merged over the last few
 months — a calendar view with per-day merge counts (each day links to the matching
 GitHub search) plus PRs-merged-per-work-day stats.
 
+<img width="1736" height="1508" alt="CleanShot 2026-06-01 at 16 28 18@2x" src="https://github.com/user-attachments/assets/b11241a4-5d7b-4f2b-a762-7cd218e0c22e" />
+
+
 ## Requirements
 
 - [`gh`](https://cli.github.com/) CLI, authenticated — check with `gh auth status`
