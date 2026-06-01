@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PR-Maxxer — Merged PR Dashboard</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #2f81f7;
+    --green-1: #0e4429;
+    --green-2: #006d32;
+    --green-3: #26a641;
+    --green-4: #39d353;
+    --weekend: #10151c;
+    --holiday: #3d1d0e;
+    --vacation: #2d2440;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.4;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 32px 20px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .stat .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .stat .value { font-size: 26px; font-weight: 600; margin-top: 4px; }
+  .stat .note { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+  .cal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .cal-head .month { font-size: 18px; font-weight: 600; }
+  .nav button {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .nav button:hover:not(:disabled) { border-color: var(--accent); }
+  .nav button:disabled { opacity: .35; cursor: default; }
+
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .dow {
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding-bottom: 4px;
+  }
+  .cell {
+    position: relative;
+    min-height: 64px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px;
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+  }
+  .cell.empty { background: transparent; border-color: transparent; }
+  .cell.weekend { background: var(--weekend); }
+  .cell.holiday { background: var(--holiday); }
+  .cell.vacation { background: var(--vacation); }
+  .cell.today { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .cell.haspr { cursor: pointer; }
+  .cell.haspr:hover { border-color: var(--accent); }
+
+  .daynum { font-size: 12px; color: var(--muted); }
+  .cell.today .daynum { color: var(--accent); font-weight: 700; }
+  .tag { font-size: 9px; color: var(--muted); margin-top: 2px; line-height: 1.1; }
+
+  .badge {
+    margin-top: auto;
+    align-self: flex-start;
+    background: var(--green-2);
+    color: #fff;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 9px;
+  }
+  .badge.l1 { background: var(--green-1); }
+  .badge.l2 { background: var(--green-2); }
+  .badge.l3 { background: var(--green-3); color: #052e16; }
+  .badge.l4 { background: var(--green-4); color: #052e16; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 18px; font-size: 12px; color: var(--muted); }
+  .legend .item { display: flex; align-items: center; gap: 6px; }
+  .legend .swatch { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--border); display: inline-block; }
+  .sw-weekend { background: var(--weekend); }
+  .sw-holiday { background: var(--holiday); }
+  .sw-vacation { background: var(--vacation); }
+  .sw-pr { background: var(--green-3); }
+
+  .tooltip {
+    position: absolute;
+    z-index: 10;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #000;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    width: 240px;
+    font-size: 11px;
+    color: var(--text);
+    display: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,.5);
+  }
+  .cell.haspr:hover .tooltip { display: block; }
+  .tooltip .pr { margin-bottom: 4px; }
+  .tooltip .pr:last-child { margin-bottom: 0; }
+  .tooltip .repo { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>PR-Maxxer</h1>
+  <div class="sub" id="subtitle"></div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="cal-head">
+    <div class="month" id="monthLabel"></div>
+    <div class="nav">
+      <button id="prevBtn" aria-label="Previous month">&larr;</button>
+      <button id="nextBtn" aria-label="Next month">&rarr;</button>
+    </div>
+  </div>
+
+  <div class="grid" id="dowRow"></div>
+  <div class="grid" id="calGrid" style="margin-top:6px;"></div>
+
+  <div class="legend">
+    <div class="item"><span class="swatch sw-pr"></span> merged PRs (click day to view on GitHub)</div>
+    <div class="item"><span class="swatch sw-weekend"></span> weekend</div>
+    <div class="item"><span class="swatch sw-holiday"></span> holiday</div>
+    <div class="item"><span class="swatch sw-vacation"></span> vacation</div>
+  </div>
+</div>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+(function () {
+  const DATA = JSON.parse(document.getElementById("data").textContent);
+  const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const MONTH_NAMES = ["January","February","March","April","May","June",
+    "July","August","September","October","November","December"];
+
+  // Parse a YYYY-MM-DD string as a *local* date (avoid UTC shift from new Date(str)).
+  function parseDate(s) {
+    const [y, m, d] = s.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+  function iso(d) {
+    return d.getFullYear() + "-" +
+      String(d.getMonth() + 1).padStart(2, "0") + "-" +
+      String(d.getDate()).padStart(2, "0");
+  }
+  function monthKey(year, month) {
+    return year + "-" + String(month + 1).padStart(2, "0");
+  }
+
+  const rangeStart = parseDate(DATA.rangeStart);
+  const rangeEnd = parseDate(DATA.rangeEnd);
+  const startYM = { y: rangeStart.getFullYear(), m: rangeStart.getMonth() };
+  const endYM = { y: rangeEnd.getFullYear(), m: rangeEnd.getMonth() };
+  const todayIso = DATA.rangeEnd; // range end is "today" at generation time.
+
+  // The browser's local TZ offset for the day-link datetime range.
+  function tzOffset(d) {
+    const mins = -d.getTimezoneOffset();
+    const sign = mins >= 0 ? "+" : "-";
+    const abs = Math.abs(mins);
+    return sign + String(Math.floor(abs / 60)).padStart(2, "0") + ":" +
+      String(abs % 60).padStart(2, "0");
+  }
+
+  // GitHub search URL scoping to PRs merged on a given local day.
+  function githubSearchUrl(dayIso) {
+    const off = tzOffset(parseDate(dayIso));
+    const range = dayIso + "T00:00:00" + off + ".." + dayIso + "T23:59:59" + off;
+    const q = "author:" + DATA.login + " is:pr is:merged merged:" + range;
+    return "https://github.com/search?q=" + encodeURIComponent(q) + "&type=pullrequests";
+  }
+
+  function badgeLevel(n) {
+    if (n >= 5) return "l4";
+    if (n >= 3) return "l3";
+    if (n >= 2) return "l2";
+    return "l1";
+  }
+
+  // Current view month, clamped to range; start at the latest month.
+  let view = { y: endYM.y, m: endYM.m };
+
+  function compareYM(a, b) {
+    return (a.y * 12 + a.m) - (b.y * 12 + b.m);
+  }
+
+  function renderStats() {
+    const o = DATA.stats.overall;
+    const mk = monthKey(view.y, view.m);
+    const mo = DATA.stats.byMonth[mk] || { totalPRs: 0, workDays: 0, prsPerWorkDay: 0 };
+    const el = document.getElementById("stats");
+    el.innerHTML = `
+      <div class="stat">
+        <div class="label">PRs / work day</div>
+        <div class="value">${o.prsPerWorkDay}</div>
+        <div class="note">over the full range</div>
+      </div>
+      <div class="stat">
+        <div class="label">Total merged PRs</div>
+        <div class="value">${o.totalPRs}</div>
+        <div class="note">${o.workDays} work days</div>
+      </div>
+      <div class="stat">
+        <div class="label">${MONTH_NAMES[view.m]} PRs / work day</div>
+        <div class="value">${mo.prsPerWorkDay}</div>
+        <div class="note">${mo.totalPRs} PRs · ${mo.workDays} work days</div>
+      </div>
+    `;
+  }
+
+  function tooltipHtml(prs) {
+    return '<div class="tooltip">' + prs.map(function (p) {
+      return '<div class="pr">#' + p.number + ' ' + escapeHtml(p.title) +
+        '<br><span class="repo">' + escapeHtml(p.repo) + '</span></div>';
+    }).join("") + '</div>';
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function renderCalendar() {
+    document.getElementById("monthLabel").textContent = MONTH_NAMES[view.m] + " " + view.y;
+
+    const dowRow = document.getElementById("dowRow");
+    dowRow.innerHTML = DOW.map(function (d) { return '<div class="dow">' + d + "</div>"; }).join("");
+
+    const first = new Date(view.y, view.m, 1);
+    const daysInMonth = new Date(view.y, view.m + 1, 0).getDate();
+    const leadingBlanks = first.getDay(); // 0 = Sunday
+
+    const cells = [];
+    for (let i = 0; i < leadingBlanks; i++) {
+      cells.push('<div class="cell empty"></div>');
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const d = new Date(view.y, view.m, day);
+      const dayIso = iso(d);
+      const inRange = d >= rangeStart && d <= rangeEnd;
+      const prs = DATA.prsByDate[dayIso] || [];
+      const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+      const holidayName = DATA.holidays[dayIso];
+      const vacLabel = DATA.vacations[dayIso];
+
+      const classes = ["cell"];
+      if (isWeekend) classes.push("weekend");
+      if (holidayName) classes.push("holiday");
+      if (vacLabel) classes.push("vacation");
+      if (dayIso === todayIso) classes.push("today");
+      if (prs.length) classes.push("haspr");
+      if (!inRange) classes.push("empty");
+
+      let inner = '<div class="daynum">' + day + "</div>";
+      if (holidayName) inner += '<div class="tag">' + escapeHtml(holidayName) + "</div>";
+      else if (vacLabel) inner += '<div class="tag">' + escapeHtml(vacLabel) + "</div>";
+
+      if (prs.length) {
+        inner += '<span class="badge ' + badgeLevel(prs.length) + '">' + prs.length + "</span>";
+        inner += tooltipHtml(prs);
+      }
+
+      if (prs.length && inRange) {
+        cells.push('<a class="' + classes.join(" ") + '" href="' +
+          githubSearchUrl(dayIso) + '" target="_blank" rel="noopener">' + inner + "</a>");
+      } else {
+        cells.push('<div class="' + classes.join(" ") + '">' + inner + "</div>");
+      }
+    }
+
+    document.getElementById("calGrid").innerHTML = cells.join("");
+
+    document.getElementById("prevBtn").disabled = compareYM(view, startYM) <= 0;
+    document.getElementById("nextBtn").disabled = compareYM(view, endYM) >= 0;
+  }
+
+  function shiftMonth(delta) {
+    const idx = view.y * 12 + view.m + delta;
+    const next = { y: Math.floor(idx / 12), m: idx % 12 };
+    if (compareYM(next, startYM) < 0 || compareYM(next, endYM) > 0) return;
+    view = next;
+    render();
+  }
+
+  function render() {
+    renderStats();
+    renderCalendar();
+  }
+
+  document.getElementById("prevBtn").addEventListener("click", function () { shiftMonth(-1); });
+  document.getElementById("nextBtn").addEventListener("click", function () { shiftMonth(1); });
+
+  document.getElementById("subtitle").textContent =
+    "@" + DATA.login + " · " + DATA.rangeStart + " → " + DATA.rangeEnd +
+    " · " + DATA.timezone + " · generated " + DATA.generatedAt;
+
+  render();
+})();
+</script>
+</body>
+</html>
