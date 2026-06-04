@@ -175,6 +175,23 @@ def main():
     def per_work_day(total, work_days):
         return round(total / work_days, 2) if work_days else 0.0
 
+    def window_stats(w_start, w_end):
+        work_days = 0
+        d = w_start
+        while d <= w_end:
+            if is_work_day(d):
+                work_days += 1
+            d += timedelta(days=1)
+        total = sum(
+            len(prs_by_date.get((w_start + timedelta(days=i)).isoformat(), []))
+            for i in range((w_end - w_start).days + 1)
+        )
+        return {
+            "totalPRs": total,
+            "workDays": work_days,
+            "prsPerWorkDay": per_work_day(total, work_days),
+        }
+
     total_prs = sum(len(v) for v in prs_by_date.values())
     stats = {
         "overall": {
@@ -182,6 +199,8 @@ def main():
             "workDays": overall_work_days,
             "prsPerWorkDay": per_work_day(total_prs, overall_work_days),
         },
+        "last7": window_stats(max(range_start, range_end - timedelta(days=6)), range_end),
+        "last30": window_stats(max(range_start, range_end - timedelta(days=29)), range_end),
         "byMonth": {},
     }
     for mk, info in by_month.items():

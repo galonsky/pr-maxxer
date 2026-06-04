@@ -232,24 +232,24 @@
 
   function renderStats() {
     const o = DATA.stats.overall;
-    const mk = monthKey(view.y, view.m);
-    const mo = DATA.stats.byMonth[mk] || { totalPRs: 0, workDays: 0, prsPerWorkDay: 0 };
+    const w7 = DATA.stats.last7;
+    const w30 = DATA.stats.last30;
     const el = document.getElementById("stats");
     el.innerHTML = `
       <div class="stat">
-        <div class="label">PRs / work day</div>
+        <div class="label">Last 7 days</div>
+        <div class="value">${w7.prsPerWorkDay}</div>
+        <div class="note">${w7.totalPRs} PRs · ${w7.workDays} work days</div>
+      </div>
+      <div class="stat">
+        <div class="label">Last 30 days</div>
+        <div class="value">${w30.prsPerWorkDay}</div>
+        <div class="note">${w30.totalPRs} PRs · ${w30.workDays} work days</div>
+      </div>
+      <div class="stat">
+        <div class="label">Full range</div>
         <div class="value">${o.prsPerWorkDay}</div>
-        <div class="note">over the full range</div>
-      </div>
-      <div class="stat">
-        <div class="label">Total merged PRs</div>
-        <div class="value">${o.totalPRs}</div>
-        <div class="note">${o.workDays} work days</div>
-      </div>
-      <div class="stat">
-        <div class="label">${MONTH_NAMES[view.m]} PRs / work day</div>
-        <div class="value">${mo.prsPerWorkDay}</div>
-        <div class="note">${mo.totalPRs} PRs · ${mo.workDays} work days</div>
+        <div class="note">${o.totalPRs} PRs · ${o.workDays} work days</div>
       </div>
     `;
   }
