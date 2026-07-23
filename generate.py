@@ -77,16 +77,23 @@ def month_key(d):
     return f"{d.year:04d}-{d.month:02d}"
 
 
-def fetch_prs(range_start):
-    """Fetch merged PRs authored by the current user since range_start."""
-    out = run([
+def fetch_prs(range_start, org_slug=None):
+    """Fetch merged PRs authored by the current user since range_start.
+
+    If org_slug is set, results are restricted to repositories owned by that
+    GitHub organization.
+    """
+    cmd = [
         "gh", "search", "prs",
         "--author=@me",
         "--merged",
         f"merged:>={range_start.isoformat()}",
         "--json", "number,title,repository,closedAt,url",
         "--limit", "1000",
-    ])
+    ]
+    if org_slug:
+        cmd.append(f"--owner={org_slug}")
+    out = run(cmd)
     return json.loads(out)
 
 
@@ -100,6 +107,7 @@ def main():
     config = json.loads(CONFIG_PATH.read_text())
     tz = ZoneInfo(config.get("timezone", "America/New_York"))
     months_back = int(config.get("monthsBack", 3))
+    org_slug = config.get("orgSlug") or None
 
     # Merge the two time-off sources into one date -> label map. `vacations` is the
     # hand-edited list; `calendarOoo` is owned by the Google Calendar connector refresh.
@@ -114,7 +122,7 @@ def main():
     range_start = add_months(first_of_month(today_local), -(months_back - 1))
     range_end = today_local
 
-    raw_prs = fetch_prs(range_start)
+    raw_prs = fetch_prs(range_start, org_slug)
 
     # Group PRs by local merge date (closedAt is the merge time for merged PRs).
     prs_by_date = {}
@@ -213,6 +221,7 @@ def main():
 
     data = {
         "login": login,
+        "orgSlug": org_slug or "",
         "generatedAt": datetime.now(tz).isoformat(timespec="seconds"),
         "timezone": str(tz),
         "rangeStart": range_start.isoformat(),

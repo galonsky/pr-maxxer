@@ -212,7 +212,8 @@
   function githubSearchUrl(dayIso) {
     const off = tzOffset(parseDate(dayIso));
     const range = dayIso + "T00:00:00" + off + ".." + dayIso + "T23:59:59" + off;
-    const q = "author:" + DATA.login + " is:pr is:merged merged:" + range;
+    let q = "author:" + DATA.login + " is:pr is:merged merged:" + range;
+    if (DATA.orgSlug) q += " org:" + DATA.orgSlug;
     return "https://github.com/search?q=" + encodeURIComponent(q) + "&type=pullrequests";
   }
 

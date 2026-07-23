@@ -38,6 +38,7 @@ cp config.example.json config.json   # then edit username, etc.
   "username": "your-github-username",
   "monthsBack": 3,
   "timezone": "America/New_York",
+  "orgSlug": "",
   "vacations": [],
   "calendarOoo": []
 }
@@ -48,6 +49,10 @@ cp config.example.json config.json   # then edit username, etc.
 - **monthsBack** — how many calendar months back to include (and page across).
 - **timezone** — IANA tz name. Merge timestamps (UTC) are grouped by their local
   date in this zone, so day boundaries match your expectation.
+- **orgSlug** — GitHub organization slug (e.g. `"my-org"`). When set, only PRs in
+  repositories owned by that organization are included — useful if your GitHub
+  account has merged PRs in both work and personal repos. Leave empty (`""`) to
+  include PRs from any repo you've authored, regardless of owner.
 - **vacations** — hand-edited list of `YYYY-MM-DD` dates to exclude from the work-day
   count (treated just like holidays). Add days here and re-run.
 - **calendarOoo** — list of `{ "date": "YYYY-MM-DD", "title": "..." }` entries, **managed
